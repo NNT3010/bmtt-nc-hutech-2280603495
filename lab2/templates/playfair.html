@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Playfair Cipher</title>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <script>
+        function generateMatrix(key) {
+            key = key.toLowerCase().replace(/[^a-z]/g, '').replace(/j/g, 'i');
+            let seen = new Set();
+            let matrix = [];
+
+            key += "abcdefghijklmnopqrstuvwxyz";
+
+            for (let char of key) {
+                if (char === 'j') char = 'i';
+                if (!seen.has(char)) {
+                    matrix.push(char);
+                    seen.add(char);
+                }
+                if (matrix.length === 25) break;
+            }
+
+            return Array.from({length: 5}, (_, i) => matrix.slice(i * 5, i * 5 + 5));
+        }
+
+        function preprocessText(text, isEncrypt = true) {
+            text = text.toLowerCase().replace(/[^a-z]/g, '').replace(/j/g, 'i');
+            if (!isEncrypt) return text.match(/.{1,2}/g);
+
+            let result = '';
+            for (let i = 0; i < text.length; i += 2) {
+                let a = text[i];
+                let b = text[i + 1];
+                if (!b) b = 'x';
+                if (a === b) {
+                    result += a + 'x';
+                    i--;  // Reprocess b as next a
+                } else {
+                    result += a + b;
+                }
+            }
+            return result.match(/.{1,2}/g);
+        }
+
+        function findPosition(matrix, char) {
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 5; j++) {
+                    if (matrix[i][j] === char) {
+                        return [i, j];
+                    }
+                }
+            }
+            return null;
+        }
+
+        function playfairCipher(text, key, encrypt = true) {
+            const matrix = generateMatrix(key);
+            const pairs = preprocessText(text, encrypt);
+            let result = '';
+
+            for (let pair of pairs) {
+                let [a, b] = pair;
+                let [rowA, colA] = findPosition(matrix, a);
+                let [rowB, colB] = findPosition(matrix, b);
+
+                if (rowA === rowB) {
+                    // Same row
+                    colA = (colA + (encrypt ? 1 : 4)) % 5;
+                    colB = (colB + (encrypt ? 1 : 4)) % 5;
+                } else if (colA === colB) {
+                    // Same column
+                    rowA = (rowA + (encrypt ? 1 : 4)) % 5;
+                    rowB = (rowB + (encrypt ? 1 : 4)) % 5;
+                } else {
+                    // Rectangle swap
+                    [colA, colB] = [colB, colA];
+                }
+
+                result += matrix[rowA][colA] + matrix[rowB][colB];
+            }
+
+            return result.toUpperCase();
+        }
+
+        function handleEncrypt() {
+            const text = document.getElementById('plainText').value;
+            const key = document.getElementById('plainKey').value;
+            const result = playfairCipher(text, key, true);
+            document.getElementById('encryptedResult').innerText = "Encrypted Result: " + result;
+        }
+
+        function handleDecrypt() {
+            const text = document.getElementById('cipherText').value;
+            const key = document.getElementById('cipherKey').value;
+            const result = playfairCipher(text, key, false);
+            document.getElementById('decryptedResult').innerText = "Decrypted Result: " + result;
+        }
+    </script>
+</head>
+<body>
+<div class="container">
+    <table class="table">
+        <!-- Tiêu đề -->
+        <tr>
+            <td style="text-align: center; font-weight: bold; font-size: 25px;">PLAYFAIR CIPHER</td>
+        </tr>
+
+        <!-- Mã hóa -->
+        <tr>
+            <td style="font-weight: bold; color: blue;">ENCRYPTION</td>
+        </tr>
+        <tr>
+            <td>
+                <div class="mb-3">
+                    <label class="form-label">Plain text:</label>
+                    <input type="text" class="form-control" id="plainText" placeholder="Input Plain Text" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Key:</label>
+                    <input type="text" class="form-control" id="plainKey" placeholder="Input Key" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleEncrypt()">Encrypt</button>
+                <p id="encryptedResult" class="mt-2 text-success"></p>
+            </td>
+        </tr>
+
+        <!-- Giải mã -->
+        <tr>
+            <td style="font-weight: bold; color: blue;">DECRYPTION</td>
+        </tr>
+        <tr>
+            <td>
+                <div class="mb-3">
+                    <label class="form-label">Cipher text:</label>
+                    <input type="text" class="form-control" id="cipherText" placeholder="Input Cipher Text" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Key:</label>
+                    <input type="text" class="form-control" id="cipherKey" placeholder="Input Key" required>
+                </div>
+                <button class="btn btn-primary" onclick="handleDecrypt()">Decrypt</button>
+                <p id="decryptedResult" class="mt-2 text-danger"></p>
+            </td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>
